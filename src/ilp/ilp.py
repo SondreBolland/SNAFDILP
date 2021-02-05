@@ -48,6 +48,7 @@ class ILP():
                 if atom not in added_atoms:
                     ground_atoms.append(atom)
                     added_atoms[atom] = 1
+
         return ground_atoms
 
     def convert(self):

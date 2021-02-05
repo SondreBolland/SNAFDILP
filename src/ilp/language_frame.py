@@ -14,8 +14,7 @@ class Language_Frame():
             p_e {list} -- Set of extensional predicates
             constants {set} -- Set of constants
         '''
-        arity = [
-        ]  # Map p_e U {target} -> N specifyig the arity of each predicate
+        arity = []  # Map p_e U {target} -> N specifyig the arity of each predicate
         for atom in p_e:
             arity.append(atom.arity)
             if not is_intensional(atom):

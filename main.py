@@ -14,7 +14,7 @@ def even_numbers_test():
 
     P = [Atom([Term(False, str(i))], 'target') for i in range(0, 21, 2)]
     N = [Atom([Term(False, str(i))], 'target') for i in range(1, 21, 2)]
-    print(P)
+
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
 
