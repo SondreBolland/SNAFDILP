@@ -10,7 +10,7 @@ class Clause():
         '''
         Arguments:
             head {Atom} -- Head atom of clause
-            body {list} -- List of body atoms
+            body {list} -- List of body literals
         '''
         self._head = head
         self._body = body
@@ -23,6 +23,7 @@ class Clause():
     def __repr__(self):
         return self.__str__()
 
+    #Some error here
     def __eq__(self, other):
         return other is not None and all([(atom in other.body) for atom in self._body]) and all([(atom in self._body) for atom in other.body]) and self._head == other.head
 

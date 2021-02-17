@@ -13,6 +13,9 @@ class Literal(Atom):
             terms {list} -- List of of terms defining atom
             name {str} -- name of the predicate
             negated {bool} -- true if the atom is negated and false if the atom is not negated
+        or, Arguments:
+            atom {Atom} -- atom of the literal
+            negated {bool} -- true if the atom is negated and false if the atom is not negated
         '''
         if len(args) == 3:
             terms = args[0]
@@ -25,6 +28,7 @@ class Literal(Atom):
             negated = args[1]
         else:
             raise ValueError("Literal requires (terms, predicate, negated) or (atom, negated)")
+
         Atom.__init__(self, terms, predicate)
         self._negated = negated
 
@@ -40,13 +44,14 @@ class Literal(Atom):
         :return: true if the atoms of the literals are equal
         and they're both negated (or both not)
         '''
-        equals = True
-        if isinstance(other, Literal):
-            equals = equals and self._negated == other.negated
-        else:
-            equals = equals and not self._negated
-        equals = equals and super(Literal, self).__eq__(other)
-        return equals
+        if not super(Literal, self).__eq__(other):
+            return False
+        if type(other) == Literal:
+            if self._negated != other.negated:
+                return False
+        elif self._negated:
+            return False
+        return True
 
     def __hash__(self):
         return hash(str(self))
