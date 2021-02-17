@@ -14,6 +14,7 @@ class Optimized_Combinatorial_Generator(Rule_Manger):
         '''Generate all clauses with some level of optimization
         '''
         rule_matrix = []
+        print("kake")
         for rule in self.rules:
             # logger.info('Generating clauses')
             if rule == None:
@@ -71,3 +72,9 @@ class Optimized_Combinatorial_Generator(Rule_Manger):
             rule_matrix.append(clauses)
             # logger.info('Clauses Generated')
         return rule_matrix
+
+    @staticmethod
+    def print_clauses(rule_matrix):
+        for rules in rule_matrix:
+            for rule in rules:
+                print(rule)
