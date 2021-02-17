@@ -57,25 +57,20 @@ class Optimized_Combinatorial_Generator_Negation(Rule_Manger):
                                 body2_atom = Atom([b2[index]
                                               for index in range(0, pred2.arity)], pred2.predicate)
 
-                                terms1 = body1_atom.terms
-                                terms2 = body2_atom.terms
-                                predicate1 = body1_atom.predicate
-                                predicate2 = body2_atom.predicate
-
                                 # No negation
                                 body1 = body1_atom
                                 body2 = body2_atom
                                 added3 = False
                                 if negations == 1: # First body is negated
-                                    body1 = Literal(terms1, predicate1, True)
+                                    body1 = Literal(body1_atom, True)
                                     body2 = body2_atom
                                 if negations == 2: # Second body is negated
                                     body1 = body1_atom
-                                    body2 = Literal(terms2, predicate2, True)
+                                    body2 = Literal(body2_atom, True)
                                     added3 = True
                                 if negations == 3: # Both bodies are negated
-                                    body1 = Literal(terms1, predicate1, True)
-                                    body2 = Literal(terms2, predicate2, True)
+                                    body1 = Literal(body1_atom, True)
+                                    body2 = Literal(body2_atom, True)
 
                                 clause = Clause(head, [body1, body2])
                                 # logger.info(clause)

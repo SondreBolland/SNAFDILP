@@ -7,6 +7,8 @@ from src.core import Clause
 import tensorflow as tf
 from collections import OrderedDict
 import numpy as np
+
+from src.ilp.generate_rules.optimized_combinatorial_negation import Optimized_Combinatorial_Generator_Negation
 from src.utils import printProgressBar
 #import tensorflow.contrib.eager as tfe # obsolete in TF2
 import os
@@ -42,9 +44,11 @@ class DILP():
         self.clause_map = {}
         with tf.compat.v1.variable_scope("rule_weights", reuse=tf.compat.v1.AUTO_REUSE):
             for p in [self.language_frame.target] + self.program_template.p_a:
-                rule_manager = Optimized_Combinatorial_Generator(
+                rule_manager = Optimized_Combinatorial_Generator_Negation(
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
+                rule_manager.print_clauses(generated)
+                exit()
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
                                                        [len(generated[0]), len(
