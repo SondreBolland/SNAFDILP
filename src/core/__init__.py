@@ -1,7 +1,4 @@
 from src.core.atom import Atom
 from src.core.clause import Clause
 from src.core.term import Term
-
-
-class Literal():
-    pass
+from src.core.literal import Literal

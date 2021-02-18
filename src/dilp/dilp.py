@@ -2,6 +2,7 @@
 '''
 
 from src.ilp import ILP, Program_Template, Language_Frame, Rule_Template, Inference
+from src.ilp.dependency_graph import Dependency_Graph
 from src.ilp.generate_rules import Optimized_Combinatorial_Generator
 from src.core import Clause
 import tensorflow as tf
@@ -48,6 +49,9 @@ class DILP():
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
                 rule_manager.print_clauses(generated)
+                print("kake\n\n")
+                dependency_graph = Dependency_Graph(generated)
+                print(dependency_graph)
                 exit()
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
