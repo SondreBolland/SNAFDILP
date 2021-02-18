@@ -57,17 +57,15 @@ class Optimized_Combinatorial_Generator_Negation(Rule_Manger):
                                 body2_atom = Atom([b2[index]
                                               for index in range(0, pred2.arity)], pred2.predicate)
 
-                                # No negation
-                                body1 = body1_atom
-                                body2 = body2_atom
-                                added3 = False
+                                if negations == 0:  # No negation
+                                    body1 = Literal(body1_atom, False)
+                                    body2 = Literal(body2_atom, False)
                                 if negations == 1: # First body is negated
                                     body1 = Literal(body1_atom, True)
-                                    body2 = body2_atom
+                                    body2 = Literal(body2_atom, False)
                                 if negations == 2: # Second body is negated
-                                    body1 = body1_atom
+                                    body1 = Literal(body1_atom, False)
                                     body2 = Literal(body2_atom, True)
-                                    added3 = True
                                 if negations == 3: # Both bodies are negated
                                     body1 = Literal(body1_atom, True)
                                     body2 = Literal(body2_atom, True)
@@ -83,13 +81,10 @@ class Optimized_Combinatorial_Generator_Negation(Rule_Manger):
                                 elif rule.allow_intensional and not (body1.predicate in intensional_predicates or body2.predicate in intensional_predicates):
                                     continue
                                 elif clause in added_pred:
-                                    if added3:
-                                        print(str(clause) + "kake")
                                     continue
                                 else:
                                     added_pred[clause] = 1
                                     clauses.append(clause)
-                                    added3 = False
             rule_matrix.append(clauses)
             # logger.info('Clauses Generated')
         return rule_matrix
