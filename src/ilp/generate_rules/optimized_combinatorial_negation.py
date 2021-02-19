@@ -17,11 +17,11 @@ class Optimized_Combinatorial_Generator_Negation(Rule_Manger):
         rule_matrix = []
         for rule in self.rules:
             # logger.info('Generating clauses')
-            if rule == None:
+            if rule is None:
                 rule_matrix.append([None])
                 continue
             clauses = []
-            if(rule.allow_intensional):
+            if rule.allow_intensional:
                 p = list(set(self.p_e + self.p_i + [self.target]))
                 p_i = list(set(self.p_i))
                 intensional_predicates = [atom.predicate for atom in p_i]

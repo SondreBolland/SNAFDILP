@@ -8,6 +8,7 @@ from src.core import Clause
 import tensorflow as tf
 from collections import OrderedDict
 import numpy as np
+from itertools import chain
 
 from src.ilp.generate_rules.optimized_combinatorial_negation import Optimized_Combinatorial_Generator_Negation
 from src.utils import printProgressBar
@@ -48,10 +49,9 @@ class DILP():
                 rule_manager = Optimized_Combinatorial_Generator_Negation(
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
-                rule_manager.print_clauses(generated)
-                print("kake\n\n")
-                dependency_graph = Dependency_Graph(generated)
-                print(dependency_graph)
+                program = list(chain.from_iterable(generated)) # create a list of all clauses
+                dependency_graph = Dependency_Graph(program)
+                dependency_graph.draw()
                 exit()
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",

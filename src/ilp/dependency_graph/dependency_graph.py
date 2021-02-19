@@ -16,6 +16,7 @@ class Dependency_Graph:
             if type(program[0]) != Clause:
                 raise ValueError("Needs to be a list of clauses")
         self.program = program
+        self.edge_list = []
         self.graph = self.generate_dependency_graph()
 
     def generate_dependency_graph(self):
@@ -24,14 +25,22 @@ class Dependency_Graph:
         and refers to relations as edges
         :return: Graph: dependency graph of the program
         '''
-        graph = nx.Graph()
+        graph = nx.MultiDiGraph()
         if len(self.program) == 0:
             return graph
 
         for clause in self.program:
             edge1, edge2 = self.get_edge_from_clause(clause)
-            graph.add_edge(edge1)
-            graph.add_edge(edge2)
+            if edge1 not in self.edge_list:
+                self.edge_list.append(edge1)
+                graph.add_edge(edge1.source, edge1.target, negated=edge1.negated,
+                               color='blue' if edge1.negated else 'black')
+            if edge2 not in self.edge_list:
+                self.edge_list.append(edge2)
+                graph.add_edge(edge2.source, edge2.target, negated=edge2.negated,
+                               color='blue' if edge2.negated else 'black')
+
+        return graph
 
     def get_edge_from_clause(self, clause: Clause):
         '''
@@ -51,11 +60,12 @@ class Dependency_Graph:
         body1_predicate = body1.predicate
         body2_predicate = body2.predicate
 
-        edge1 = (head_predicate, body1_predicate, {'negated': body1.negated})
-        edge2 = (head_predicate, body2_predicate, {'negated': body2.negated})
+        edge1 = Edge(head_predicate, body1_predicate, body1.negated)
+        edge2 = Edge(head_predicate, body2_predicate, body2.negated)
+
         return edge1, edge2
 
-    def is_statified(self):
+    def is_stratified(self):
         '''
         Checks if the logic program can be stratified.
         :return: bool: True if the program can be stratified. False if not.
@@ -66,7 +76,55 @@ class Dependency_Graph:
         pass
 
     def __str__(self):
+        '''
+        Does not show whether an edge is negative or positive
+        '''
         string = ""
         for node in self.graph.nodes:
-            string += '%s -> %s' % (str(node), ','.join(str(target) for target in self.graph[node]))
+            string += '%s --> (%s) ' % (str(node), ','.join(str(target) for target in self.graph[node]))
         return string
+
+    def draw(self):
+        import matplotlib.pyplot as plt
+        G = self.graph
+        pos = nx.circular_layout(G)
+        edges = G.edges()
+        colors = nx.get_edge_attributes(G, 'color').values()
+        nx.draw(G, pos, edges=edges, edge_color=colors, with_labels=True)
+        plt.show()
+
+
+class Edge:
+
+    def __init__(self, source, target, negated: bool):
+        '''
+        Arguments:
+            source {String} -- Source of the edge
+            target {String} -- Target of the edge
+            negated {bool} -- Whether the edge is negative (represents negation)
+        '''
+        self._source = source
+        self._target = target
+        self._negated = negated
+
+    @property
+    def source(self):
+        return self._source
+
+    @property
+    def target(self):
+        return self._target
+
+    @property
+    def negated(self):
+        return self._negated
+
+    def __str__(self):
+        return f"({self.source}, {self.target}," + "{prefix})".format(prefix="negative" if self.negated else "positive")
+
+    def __eq__(self, other):
+        if type(other) != Edge:
+            return False
+        return self.source == other.source\
+               and self.target == other.target\
+               and self.negated == other.negated
