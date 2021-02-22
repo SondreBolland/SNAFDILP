@@ -59,3 +59,6 @@ class Literal(Atom):
     @property
     def negated(self):
         return self._negated
+
+    def negate(self):
+        self.negated = not self.negated

@@ -10,7 +10,8 @@ class Dependency_Graph:
 
     def __init__(self, program: list):
         '''
-        :param program: list of clauses defining all relations in the logic program
+        Arguments:
+            program {list} -- List of clauses defining all relations in the logic program
         '''
         if len(program) != 0:
             if type(program[0]) != Clause:
@@ -29,27 +30,42 @@ class Dependency_Graph:
         if len(self.program) == 0:
             return graph
 
+        # For each clause in the program fetch the edges "refers to"
         for clause in self.program:
             edge1, edge2 = self.get_edge_from_clause(clause)
-            if edge1 not in self.edge_list:
-                self.edge_list.append(edge1)
-                graph.add_edge(edge1.source, edge1.target, negated=edge1.negated,
-                               color='blue' if edge1.negated else 'black')
-            if edge2 not in self.edge_list:
-                self.edge_list.append(edge2)
-                graph.add_edge(edge2.source, edge2.target, negated=edge2.negated,
-                               color='blue' if edge2.negated else 'black')
+            self.add_edge(edge1, graph)
+            self.add_edge(edge2, graph)
 
         return graph
+
+    def add_edge(self, edge, graph):
+        '''
+        Add edge if not already in graph.
+        Negative edges override positive edges.
+        '''
+        if edge.negated:
+            positive_edge = Edge(edge.source, edge.target, False)
+            # remove all positive instances of the edge
+            while positive_edge in self.edge_list:
+                self.edge_list.remove(positive_edge)
+        # If the edge is not in the graph, nor its negative version, add edge
+        if edge not in self.edge_list and not self.has_negative_edge_version(edge):
+            self.edge_list.append(edge)
+            graph.add_edge(edge.source, edge.target, negated=edge.negated,
+                           color='blue' if edge.negated else 'black')
+
+    def has_negative_edge_version(self, edge):
+        positive_edge = Edge(edge.source, edge.target, True)
+        return positive_edge in self.edge_list
 
     def get_edge_from_clause(self, clause: Clause):
         '''
         Generates edges from clause. head predicate is source
-        and body predicates are targets.
+        and body predicates are targets. Each clause has two bodies hence two edges.
         Each edge has an attribute "negated" which refers to
         the negation of the body's literals.
-        :param clause:
-        :return:
+        :param clause: Clause object to retrieve edges from
+        :return: two Edge objects from the clause
         '''
         head_predicate = clause.head.predicate
         body1 = clause.body[0]
@@ -70,7 +86,18 @@ class Dependency_Graph:
         Checks if the logic program can be stratified.
         :return: bool: True if the program can be stratified. False if not.
         '''
-        pass
+        G = self.graph
+        cycle = nx.find_cycle(G)
+        for edge in cycle:
+            source = edge[0]
+            target = edge[1]
+            data = G.get_edge_data(source, target)
+            negated = data[0]['negated']
+            if negated:
+                print("Program not stratified")
+                return False
+        print("Program is stratified")
+        return True
 
     def will_terminate(self):
         pass
@@ -79,18 +106,34 @@ class Dependency_Graph:
         '''
         Does not show whether an edge is negative or positive
         '''
+        G = self.graph
         string = ""
         for node in self.graph.nodes:
-            string += '%s --> (%s) ' % (str(node), ','.join(str(target) for target in self.graph[node]))
+            string += f'{node} -> ('
+            for i, target in enumerate(G[node]):
+                data = G.get_edge_data(node, target)
+                for attributes in data:
+                    if data[attributes]['negated']:
+                        string += "not "
+                string += str(target)
+                if i != len(G[node])-1:
+                    string += ", "
+            string += '), '
         return string
 
     def draw(self):
+        '''
+        Draws dependency graph.
+        Does not support relexive edges.
+        '''
         import matplotlib.pyplot as plt
+        from networkx.drawing.nx_agraph import to_agraph
         G = self.graph
         pos = nx.circular_layout(G)
         edges = G.edges()
         colors = nx.get_edge_attributes(G, 'color').values()
-        nx.draw(G, pos, edges=edges, edge_color=colors, with_labels=True)
+
+        nx.draw(G, pos, edges=edges, node_color='red', edge_color=colors, with_labels=True)
         plt.show()
 
 

@@ -51,7 +51,9 @@ class DILP():
                 generated = rule_manager.generate_clauses()
                 program = list(chain.from_iterable(generated)) # create a list of all clauses
                 dependency_graph = Dependency_Graph(program)
+                print(dependency_graph)
                 dependency_graph.draw()
+                dependency_graph.is_stratified()
                 exit()
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
