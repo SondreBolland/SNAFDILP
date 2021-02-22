@@ -32,6 +32,8 @@ class Dependency_Graph:
 
         # For each clause in the program fetch the edges "refers to"
         for clause in self.program:
+            if type(clause) != Clause:
+                continue
             edge1, edge2 = self.get_edge_from_clause(clause)
             self.add_edge(edge1, graph)
             self.add_edge(edge2, graph)
@@ -94,9 +96,7 @@ class Dependency_Graph:
             data = G.get_edge_data(source, target)
             negated = data[0]['negated']
             if negated:
-                print("Program not stratified")
                 return False
-        print("Program is stratified")
         return True
 
     def will_terminate(self):

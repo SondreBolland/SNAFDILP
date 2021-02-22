@@ -35,6 +35,7 @@ class DILP():
         self.training_data = OrderedDict()  # index to label
         self.__init__parameters()
 
+
     def __init__parameters(self):
         self.rule_weights = OrderedDict()
         ilp = ILP(self.language_frame, self.background,
@@ -44,17 +45,18 @@ class DILP():
         self.base_valuation = valuation
         self.deduction_map = {}
         self.clause_map = {}
+        program = []
         with tf.compat.v1.variable_scope("rule_weights", reuse=tf.compat.v1.AUTO_REUSE):
             for p in [self.language_frame.target] + self.program_template.p_a:
                 rule_manager = Optimized_Combinatorial_Generator_Negation(
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
-                program = list(chain.from_iterable(generated)) # create a list of all clauses
+                program += list(chain.from_iterable(generated)) # create a list of all clauses
                 dependency_graph = Dependency_Graph(program)
                 print(dependency_graph)
                 dependency_graph.draw()
-                dependency_graph.is_stratified()
-                exit()
+                print(dependency_graph.is_stratified())
+                continue
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
                                                        [len(generated[0]), len(
@@ -77,6 +79,7 @@ class DILP():
                 self.training_data[valuation_mapping[atom]] = 1.0
             elif atom in self.negative:
                 self.training_data[valuation_mapping[atom]] = 0.0
+        exit()
 
     def __all_variables(self):
         return [weights for weights in self.rule_weights.values()]
