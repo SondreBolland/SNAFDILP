@@ -2,9 +2,7 @@
 '''
 
 from src.ilp import ILP, Program_Template, Language_Frame, Rule_Template, Inference
-from src.ilp.dependency_graph import Dependency_Graph
-from src.ilp.generate_rules import Optimized_Combinatorial_Generator
-from src.core import Clause
+from src.ilp.generate_rules import Optimized_Combinatorial_Generator, Stratified_Program
 import tensorflow as tf
 from collections import OrderedDict
 import numpy as np
@@ -35,7 +33,6 @@ class DILP():
         self.training_data = OrderedDict()  # index to label
         self.__init__parameters()
 
-
     def __init__parameters(self):
         self.rule_weights = OrderedDict()
         ilp = ILP(self.language_frame, self.background,
@@ -46,17 +43,19 @@ class DILP():
         self.deduction_map = {}
         self.clause_map = {}
         program = []
+        count = 0
         with tf.compat.v1.variable_scope("rule_weights", reuse=tf.compat.v1.AUTO_REUSE):
             for p in [self.language_frame.target] + self.program_template.p_a:
                 rule_manager = Optimized_Combinatorial_Generator_Negation(
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
                 program += list(chain.from_iterable(generated)) # create a list of all clauses
-                dependency_graph = Dependency_Graph(program)
-                print(dependency_graph)
-                dependency_graph.draw()
-                print(dependency_graph.is_stratified())
-                continue
+                if count < 1:
+                    count += 1
+                    continue
+                programs = Stratified_Program.generate_stratified_programs(program, 20)
+                #print(programs)
+                exit()
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
                                                        [len(generated[0]), len(
@@ -79,7 +78,6 @@ class DILP():
                 self.training_data[valuation_mapping[atom]] = 1.0
             elif atom in self.negative:
                 self.training_data[valuation_mapping[atom]] = 0.0
-        exit()
 
     def __all_variables(self):
         return [weights for weights in self.rule_weights.values()]

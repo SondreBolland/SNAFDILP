@@ -13,9 +13,6 @@ class Dependency_Graph:
         Arguments:
             program {list} -- List of clauses defining all relations in the logic program
         '''
-        if len(program) != 0:
-            if type(program[0]) != Clause:
-                raise ValueError("Needs to be a list of clauses")
         self.program = program
         self.edge_list = []
         self.graph = self.generate_dependency_graph()
@@ -89,14 +86,17 @@ class Dependency_Graph:
         :return: bool: True if the program can be stratified. False if not.
         '''
         G = self.graph
-        cycle = nx.find_cycle(G)
-        for edge in cycle:
-            source = edge[0]
-            target = edge[1]
-            data = G.get_edge_data(source, target)
-            negated = data[0]['negated']
-            if negated:
-                return False
+        try:
+            cycle = nx.find_cycle(G)
+            for edge in cycle:
+                source = edge[0]
+                target = edge[1]
+                data = G.get_edge_data(source, target)
+                negated = data[0]['negated']
+                if negated:
+                    return False
+        except nx.NetworkXNoCycle:
+            pass
         return True
 
     def will_terminate(self):

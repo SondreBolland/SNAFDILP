@@ -1,2 +1,3 @@
 from src.ilp.generate_rules.combinatorial import Combinatorial_Generator
 from src.ilp.generate_rules.optimized_combinatorial import Optimized_Combinatorial_Generator
+from src.ilp.generate_rules.stratified_program import Stratified_Program
