@@ -1,6 +1,6 @@
 '''For testing DILP
 '''
-from src.core import Term, Atom
+from src.core import Term, Atom, Literal
 from src.ilp import Language_Frame, Program_Template, Rule_Template
 from src.dilp import DILP
 import tensorflow as tf
@@ -41,12 +41,15 @@ def even_numbers_test():
 
 
 def even_numbers_negation_test():
-    B = [Atom([Term(False, '0')], 'zero')] + \
+    B_atom = [Atom([Term(False, '0')], 'zero')] + \
         [Atom([Term(False, str(i)), Term(False, str(i + 1))], 'succ')
          for i in range(0, 20)]
+    B = [Literal(atom, False) for atom in B_atom]
 
-    P = [Atom([Term(False, str(i))], 'target') for i in range(0, 21, 2)]
-    N = [Atom([Term(False, str(i))], 'target') for i in range(1, 21, 2)]
+    P_atom = [Atom([Term(False, str(i))], 'target') for i in range(0, 21, 2)]
+    P = [Literal(atom, False) for atom in P_atom]
+    N_atom = [Atom([Term(False, str(i))], 'target') for i in range(1, 21, 2)]
+    N = [Literal(atom, False) for atom in N_atom]
 
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')

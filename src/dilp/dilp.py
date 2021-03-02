@@ -1,7 +1,7 @@
 '''Defines the main differentiable ILP code
 '''
 
-from src.ilp import ILP, Program_Template, Language_Frame, Rule_Template, Inference
+from src.ilp import ILP, Program_Template, Language_Frame, Rule_Template, Inference, ILP_Negation
 from src.ilp.generate_rules import Optimized_Combinatorial_Generator, Stratified_Program
 import tensorflow as tf
 from collections import OrderedDict
@@ -35,27 +35,18 @@ class DILP():
 
     def __init__parameters(self):
         self.rule_weights = OrderedDict()
-        ilp = ILP(self.language_frame, self.background,
+        ilp = ILP_Negation(self.language_frame, self.background,
                   self.positive, self.negative, self.program_template)
         (valuation, valuation_mapping) = ilp.convert()
         self.valuation_mapping = valuation_mapping
         self.base_valuation = valuation
         self.deduction_map = {}
         self.clause_map = {}
-        program = []
-        count = 0
         with tf.compat.v1.variable_scope("rule_weights", reuse=tf.compat.v1.AUTO_REUSE):
             for p in [self.language_frame.target] + self.program_template.p_a:
                 rule_manager = Optimized_Combinatorial_Generator_Negation(
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
-                program += list(chain.from_iterable(generated)) # create a list of all clauses
-                if count < 1:
-                    count += 1
-                    continue
-                programs = Stratified_Program.generate_stratified_programs(program, 20)
-                #print(programs)
-                exit()
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
                                                        [len(generated[0]), len(
@@ -65,19 +56,28 @@ class DILP():
                 deduction_matrices = []
                 elm1 = []
                 for clause1 in generated[0]:
-                    elm1.append(Inference.x_c(
-                        clause1, valuation_mapping, self.language_frame.constants))
+                    if clause1.body[0].negated:
+                        elm1.append(Inference.x_c(
+                            clause1, valuation_mapping, self.language_frame.constants))
                 elm2 = []
                 for clause2 in generated[1]:
                     elm2.append(Inference.x_c(
                         clause2, valuation_mapping, self.language_frame.constants))
                 deduction_matrices.append((elm1, elm2))
                 self.deduction_map[p] = deduction_matrices
-        for atom in valuation_mapping:
-            if atom in self.positive:
-                self.training_data[valuation_mapping[atom]] = 1.0
-            elif atom in self.negative:
-                self.training_data[valuation_mapping[atom]] = 0.0
+        for literal in valuation_mapping:
+            if literal.negated:
+                positive_version = literal.__copy__()
+                positive_version.negate()
+                if positive_version in self.positive:
+                    self.training_data[valuation_mapping[literal]] = 0.0
+                elif positive_version in self.negative:
+                    self.training_data[valuation_mapping[literal]] = 1.0
+            else:
+                if literal in self.positive:
+                    self.training_data[valuation_mapping[literal]] = 1.0
+                elif literal in self.negative:
+                    self.training_data[valuation_mapping[literal]] = 0.0
 
     def __all_variables(self):
         return [weights for weights in self.rule_weights.values()]

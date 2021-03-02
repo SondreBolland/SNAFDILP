@@ -33,7 +33,7 @@ class Literal(Atom):
         self._negated = negated
 
     def __str__(self):
-        return "{prefix} ".format(prefix="not" if self._negated else "") +  super(Literal, self).__str__()
+        return "{prefix}".format(prefix="not " if self._negated else "") + super(Literal, self).__str__()
 
     def __repr__(self):
         return self.__str__()
@@ -44,12 +44,12 @@ class Literal(Atom):
         :return: true if the atoms of the literals are equal
         and they're both negated (or both not)
         '''
-        if not super(Literal, self).__eq__(other):
-            return False
         if type(other) == Literal:
             if self._negated != other.negated:
                 return False
         elif self._negated:
+            return False
+        if not super(Literal, self).__eq__(other):
             return False
         return True
 
@@ -61,4 +61,9 @@ class Literal(Atom):
         return self._negated
 
     def negate(self):
-        self.negated = not self.negated
+        self._negated = not self._negated
+
+    def __copy__(self):
+        copy_atom = Atom(self._terms, self._predicate)
+        copy_literal = Literal(copy_atom, self._negated)
+        return copy_literal

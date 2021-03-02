@@ -54,6 +54,11 @@ class Dependency_Graph:
                            color='blue' if edge.negated else 'black')
 
     def has_negative_edge_version(self, edge):
+        '''
+        Checks if the list of edges already has the negative version of the edge
+        :param edge:
+        :return: true if the negative edge already exists, false if not
+        '''
         positive_edge = Edge(edge.source, edge.target, True)
         return positive_edge in self.edge_list
 

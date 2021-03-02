@@ -21,8 +21,7 @@ class Atom():
         return self.__str__()
 
     def __eq__(self, other):
-        equals = self._terms == other.terms and self._predicate == other.predicate \
-                 and type(other) == Atom
+        equals = self._terms == other.terms and self._predicate == other.predicate
         return equals
 
     def __hash__(self):

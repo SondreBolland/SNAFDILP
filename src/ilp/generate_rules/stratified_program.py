@@ -8,12 +8,11 @@ from src.ilp.dependency_graph import Dependency_Graph
 class Stratified_Program:
 
     @staticmethod
-    def generate_stratified_programs(clauses, max_program_size):
+    def generate_stratified_programs(clauses, max_program_size=20, verbose=False):
         '''
         Generates all stratified programs from a set of clauses.
         '''
-        max_program_size = 20
-        number_of_subsets_per_size = 100000
+        number_of_subsets_per_size = 1000
         all_programs = Stratified_Program.generate_subsets(clauses, max_program_size, number_of_subsets_per_size)
         stratified_programs = []
         total_programs = 0
@@ -24,8 +23,11 @@ class Stratified_Program:
             if dependency_graph.is_stratified():
                 stratified_programs.append([program])
                 stratified_count += 1
-        print(f'Total number of programs: {total_programs}')
-        print(f'Stratified programs: {stratified_count}')
+        if verbose:
+            print(f'Max program Size: {max_program_size}')
+            print(f'Number of programs of each size: {number_of_subsets_per_size}')
+            print(f'Total number of programs: {total_programs}')
+            print(f'Stratified programs: {stratified_count}')
         return stratified_programs
 
     @staticmethod

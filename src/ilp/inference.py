@@ -1,6 +1,6 @@
 '''Defines the inference
 '''
-from src.core import Atom, Clause, Term
+from src.core import Atom, Clause, Term, Literal
 from src.ilp.generate_rules import Optimized_Combinatorial_Generator
 from itertools import product
 from collections import defaultdict
@@ -83,13 +83,14 @@ class Inference():
             substituted_head = Atom(
                 [subs[term] for term in clause.head.terms], clause.head.predicate)
             derived = []
-            for atom in clause.body:
-                substituted_body = Atom([subs[term]
-                                         for term in atom.terms], atom.predicate)
+            for literal in clause.body:
+                substituted_body_atom = Atom([subs[term]
+                                         for term in literal.terms], literal.predicate)
+                substituted_body = Literal(substituted_body_atom, literal.negated)
                 derived.append(int(dict_valuation[substituted_body]))
             derived_valuation[substituted_head].append(derived)
-        for atom in derived_valuation:
-            for i in range(0, len(derived_valuation[atom])):
-                x_c[dict_valuation[atom], i, 0] = derived_valuation[atom][i][0]
-                x_c[dict_valuation[atom], i, 1] = derived_valuation[atom][i][1]
+        for literal in derived_valuation:
+            for i in range(0, len(derived_valuation[literal])):
+                x_c[dict_valuation[literal], i, 0] = derived_valuation[literal][i][0]
+                x_c[dict_valuation[literal], i, 1] = derived_valuation[literal][i][1]
         return x_c
