@@ -1,11 +1,19 @@
 import itertools
 from itertools import chain, combinations
 import random
+from collections import defaultdict
 
+from src.core import Clause
 from src.ilp.dependency_graph import Dependency_Graph
 
 
 class Stratified_Program:
+
+    def __init__(self, program: list):
+        dependency_graph = Dependency_Graph(program)
+        if not dependency_graph.is_stratified():
+            raise ValueError("Program must be stratified.")
+        self.program = program
 
     @staticmethod
     def generate_stratified_programs(clauses, max_program_size=20, verbose=False):
@@ -21,7 +29,7 @@ class Stratified_Program:
             total_programs += 1
             dependency_graph = Dependency_Graph(program)
             if dependency_graph.is_stratified():
-                stratified_programs.append([program])
+                stratified_programs.append(program)
                 stratified_count += 1
         if verbose:
             print(f'Max program Size: {max_program_size}')
@@ -50,14 +58,6 @@ class Stratified_Program:
             size = size - 1
             random_subsets.append(subset)
         return random_subsets
-
-    @staticmethod
-    def power_set(sequence):
-        '''
-        Constructs power set of sequence
-        '''
-        s = list(sequence)
-        return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
     @staticmethod
     def generate_subsets(iterable, max_subset_size, n_subsets_of_size):
@@ -94,3 +94,112 @@ class Stratified_Program:
             yield list(iterable[i] for i in indices)
             count += 1  # !!
         return iterable
+
+    def partition_program(self):
+        clauses = self.program
+
+        predicate_list = defaultdict(list)
+        for clause in clauses:
+            if clause is None:
+                continue
+            predicate = clause.head.predicate
+            predicate_list[predicate].append(clause)
+
+        # Create first stratum p_0
+        p_0 = []
+        defined_predicate = []
+        for predicate in predicate_list.keys():
+            is_definite = True
+            for clause in predicate_list[predicate]:
+                if self.has_negation(clause):
+                    is_definite = False
+            if is_definite:
+                p_0.extend(predicate_list[predicate])
+                defined_predicate.append(predicate)
+        # Remove all p_0 predicates from program
+        for predicate in defined_predicate:
+            predicate_list.pop(predicate)
+
+        # Add all remaining strata
+        strata = defaultdict(list)
+        strata[0] = p_0
+        stratum_index = 1
+        while len(predicate_list) != 0:
+            predicate_list, current_stratum = self.next_stratum(predicate_list, strata)
+            strata[stratum_index].extend(current_stratum)
+            stratum_index += 1
+        return strata
+
+    def next_stratum(self, predicate_list, strata):
+        stratum = []
+        defined_predicate = []
+        for predicate in predicate_list.keys():
+            defined_negated_body = True
+            for clause in predicate_list[predicate]:
+                for literal in clause.body:
+                    if literal.negated:
+                        name = literal.predicate
+                        if not self.is_defined(name, strata):
+                            defined_negated_body = False
+                if not defined_negated_body:
+                    break
+            if not defined_negated_body:
+                stratum.extend(predicate_list[predicate])
+                defined_predicate.append(predicate)
+
+        for predicate in defined_predicate:
+            predicate_list.pop(predicate)
+
+        return predicate_list, stratum
+
+    def is_defined(self, predicate, strata):
+        '''
+        Check if given predicate is defined in the list of strata
+        :param predicate: string
+        :param strata: list of list of clauses
+        :return: true if predicate is defined, false if not
+        '''
+        for stratum in strata.keys():
+            for clause in strata[stratum]:
+                head = clause.head
+                if head.predicate == predicate:
+                    return True
+        return False
+
+    def get_definite_clauses(self, clauses):
+        '''
+        Finds all definite clauses in set of clauses
+        :param clauses:
+        :return: list of all definite clauses and
+         list of all other clauses
+        '''
+        definite_clauses = []
+        rest_clauses = []
+        for clause in clauses:
+            if not self.has_negation(clause):
+                definite_clauses.append(clause)
+            else:
+                rest_clauses.append(clause)
+        return definite_clauses, rest_clauses
+
+    def has_negation(self, clause):
+        '''
+        Checks if the clause has a literal in the body that is negated
+        :param clause: Logic program clause
+        :return: true if negated literal in body, false if not
+        '''
+        if type(clause) != Clause:
+            raise ValueError("Argument must be of type Clause")
+        for literal in clause.body:
+            if literal.negated:
+                return True
+        return False
+
+    def get_predicates(self, clauses):
+        predicates = []
+        for clause in clauses:
+            if clause is None:
+                continue
+            head = clause.head
+            predicates.append(head.predicate)
+        return predicates

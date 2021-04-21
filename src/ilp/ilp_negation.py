@@ -22,6 +22,22 @@ class ILP_Negation():
         self.positive = positive
         self.negative = negative
         self.program_template = program_template
+        self.uses_negation = self.uses_negation()
+
+    def uses_negation(self):
+        '''
+        Checks if any of the rule templates allow the use of negation
+        :return: true if negation is allowed, false if not
+        '''
+        rules = self.program_template.rules
+        for rule_template_pair in rules.values():
+            for rule_template in rule_template_pair:
+                if rule_template is None:
+                    continue
+                allow_negation = rule_template.neg
+                if allow_negation:
+                    return True
+        return False
 
     def generate_ground_literals(self):
         '''Generates the ground atoms from p_i,p_a,target and constants
@@ -37,7 +53,7 @@ class ILP_Negation():
                 term1 = Term(False, const1)
                 term2 = Term(False, const2)
                 constant_matrix.append([term1, term2])
-        # Build ground atoms
+        # Build ground, non negated, atoms
         ground_positive_literals = []
         ground_positive_literals.append(Literal(Atom([], '⊥'), False))
         added_literals = {}
@@ -50,11 +66,13 @@ class ILP_Negation():
                     added_literals[literal] = 1
         ground_literals = []
         ground_literals += ground_positive_literals
-        for atom in ground_positive_literals:
-            if atom == Atom([],'⊥'):
-                continue
-            negative_literal = Literal(atom, True)
-            ground_literals.append(negative_literal)
+        if self.uses_negation:
+            for literal in ground_positive_literals:
+                #if atom == Atom([],'⊥'):
+                #    continue
+                negative_literal = literal.__copy__()
+                negative_literal.negate()
+                ground_literals.append(negative_literal)
         return ground_literals
 
     def convert(self):
@@ -63,12 +81,27 @@ class ILP_Negation():
         ground_literals = self.generate_ground_literals()
         valuation_mapping = {}
         initial_valuation = []
+        predicate_valuation_idx_map = {}
+
+        current_predicate = ground_literals[0].predicate
+        start_idx = 0
+        n_positive_literals = (len(ground_literals)/2) if self.uses_negation else len(ground_literals)
         for idx, literal in enumerate(ground_literals):
+            predicate = literal.predicate
+            if predicate != current_predicate and idx < n_positive_literals:
+                predicate_slice = [start_idx, idx-1]
+                predicate_valuation_idx_map.update({current_predicate: predicate_slice})
+                start_idx = idx
+                current_predicate = predicate
+            elif idx+1 == n_positive_literals:
+                predicate_slice = [start_idx, idx]
+                predicate_valuation_idx_map.update({current_predicate: predicate_slice})
+
             if literal.negated:
                 # Create positive version of the literal to get it's valuation
                 positive_version = literal.__copy__()
                 positive_version.negate()
-                positive_version_valuation = valuation_mapping[positive_version]
+                positive_version_valuation = initial_valuation[valuation_mapping[positive_version]]
                 complement_valuation = 1 - positive_version_valuation
                 initial_valuation.append(complement_valuation)
                 valuation_mapping[literal] = idx
@@ -78,4 +111,6 @@ class ILP_Negation():
             else:
                 initial_valuation.append(0)
                 valuation_mapping[literal] = idx
-        return (np.array(initial_valuation, dtype=np.float32), valuation_mapping)
+
+        print(predicate_valuation_idx_map)
+        return (np.array(initial_valuation, dtype=np.float32), valuation_mapping, predicate_valuation_idx_map)

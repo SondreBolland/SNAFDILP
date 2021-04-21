@@ -1,6 +1,7 @@
 '''Defines stateless utility functions
 '''
 from src.core import Atom
+import tensorflow as tf
 
 
 def is_intensional(atom: Atom):
@@ -37,6 +38,10 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
     # Print New Line on Complete
     if iteration == total:
         print()
+
+def create_mask(tensor, change_indices):
+    mask = tf.Variable(change_indices, dtype=tensor.dtype)
+    return mask
 
 
 INTENSIONAL_REQUIRED_MESSAGE = 'Atom is not intensional'

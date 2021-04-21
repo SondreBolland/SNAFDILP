@@ -56,7 +56,6 @@ class Inference():
     @staticmethod
     def x_c(clause: Clause, dict_valuation: dict, constants: list):
         '''
-
         Arguments:
             clause {Clause} -- clause to generate f_c
             valuations {list} -- valuation list
@@ -77,6 +76,7 @@ class Inference():
         w = np.power(
             len(constants), existential_variable)
         x_c = np.zeros((len(dict_valuation), w, 2), dtype=int)
+
         derived_valuation = defaultdict(list)
         for elm in product(*comb):
             subs = {a[0]: a[1] for a in elm}
@@ -88,9 +88,14 @@ class Inference():
                                          for term in literal.terms], literal.predicate)
                 substituted_body = Literal(substituted_body_atom, literal.negated)
                 derived.append(int(dict_valuation[substituted_body]))
-            derived_valuation[substituted_head].append(derived)
+            if derived not in derived_valuation[substituted_head]: # BIG MAYBE
+                derived_valuation[substituted_head].append(derived)
+
         for literal in derived_valuation:
             for i in range(0, len(derived_valuation[literal])):
+                x_c[dict_valuation[literal], i, 0] = 0
                 x_c[dict_valuation[literal], i, 0] = derived_valuation[literal][i][0]
                 x_c[dict_valuation[literal], i, 1] = derived_valuation[literal][i][1]
         return x_c
+
+

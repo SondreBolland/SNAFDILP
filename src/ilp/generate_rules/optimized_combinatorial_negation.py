@@ -82,6 +82,14 @@ class Optimized_Combinatorial_Generator_Negation(Rule_Manger):
                                     continue
                                 elif clause in added_pred:
                                     continue
+                                # Disallow a clause with the head negated in the body
+                                elif head.predicate == body1.predicate and body1.negated:
+                                    continue
+                                elif head.predicate == body2.predicate and body2.negated:
+                                    continue
+                                # Disallow positive and negative versions of the same literal in a clause
+                                elif body1_atom == body2_atom and body1.negated != body2.negated:
+                                    continue
                                 else:
                                     added_pred[clause] = 1
                                     clauses.append(clause)

@@ -50,5 +50,8 @@ class Clause():
     def variables(self):
         '''Return all the variable used in the clause
         '''
-
         return self._variable
+
+    @staticmethod
+    def alphabetical_sort(clause):
+        return clause.head.predicate[0]
