@@ -556,7 +556,7 @@ def odd():
 best_loss = 99999
 for i in range(100):
     print(f"Iteration {i}")
-    loss = no_negative_cycle()
+    loss = has_roommate()
     if loss < best_loss:
         best_loss = loss
     print(f"Lowest loss: {best_loss}")

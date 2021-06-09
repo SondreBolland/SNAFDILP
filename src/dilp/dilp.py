@@ -89,14 +89,6 @@ class DILP():
                 elif literal in self.negative:
                     self.training_data[valuation_mapping[literal]] = 0.0
 
-    '''
-    def set_BPN(self, background, positive, negative, rule_weights):
-        self.background = background
-        self.positive = positive
-        self.negative = negative
-        self.__init__parameters(rule_weights)
-        '''
-
     def __all_variables(self):
         return [weights for weights in self.rule_weights.values()]
 

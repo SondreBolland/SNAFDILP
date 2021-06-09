@@ -89,7 +89,16 @@ class Optimized_Combinatorial_Generator_Negation(Rule_Manger):
                                     continue
                                 # Disallow positive and negative versions of the same literal in a clause
                                 elif body1_atom == body2_atom and body1.negated != body2.negated:
-                                    continue
+                                    # If the variables of the clause are different then allow this clause
+                                    variables1 = body1_atom.terms
+                                    variables2 = body2_atom.terms
+                                    add_clause = True
+                                    for i in range(len(variables1)):
+                                        if variables1[i] != variables2[i]:
+                                            add_clause = False
+                                            break
+                                    if not add_clause:
+                                        continue
                                 else:
                                     added_pred[clause] = 1
                                     clauses.append(clause)
