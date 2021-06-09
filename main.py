@@ -9,6 +9,54 @@ from src.ilp.template.rule_template_negation import Rule_Template_Negation
 
 tf.compat.v1.enable_eager_execution()
 
+def is_cyclic():
+    '''
+    Learn the target predicate no_negative_cycle(X). The predicate checks if
+    a given node in a graph is part of a negative cycle (cycle with at least one
+    negative edge).
+    '''
+    constants = ['a', 'b', 'c', 'd', 'e', 'f']
+    ### (B, P, N) Number 1
+    B_atom = [Atom([Term(False, 'a'), Term(False, 'b')], 'edge'),
+                     Atom([Term(False, 'b'), Term(False, 'c')], 'edge'),
+                     Atom([Term(False, 'c'), Term(False, 'a')], 'edge'),
+                     Atom([Term(False, 'b'), Term(False, 'd')], 'edge'),
+                     Atom([Term(False, 'd'), Term(False, 'e')], 'edge'),
+                     Atom([Term(False, 'd'), Term(False, 'f')], 'edge'),
+                     Atom([Term(False, 'f'), Term(False, 'e')], 'edge'),
+                     Atom([Term(False, 'e'), Term(False, 'f')], 'edge')]
+    B = [Literal(atom, False) for atom in B_atom]
+
+    P_atom = [Atom([Term(False, 'a')], 'target'),
+              Atom([Term(False, 'b')], 'target'),
+              Atom([Term(False, 'c')], 'target'),
+              Atom([Term(False, 'e')], 'target'),
+              Atom([Term(False, 'f')], 'target')]
+    P = [Literal(atom, False) for atom in P_atom]
+
+    N_atom = [Atom([Term(False, 'd')], 'target')]
+    N = [Literal(atom, False) for atom in N_atom]
+
+    term_x_0 = Term(True, 'X_0')
+    term_x_1 = Term(True, 'X_1')
+    term_x_2 = Term(True, 'X_2')
+
+    p_e = [Literal(Atom([term_x_0, term_x_1], 'edge'), False)]
+    p_a = [Literal(Atom([term_x_0, term_x_2], 'pred'), False)]
+    target = Literal(Atom([term_x_0], 'target'), False)
+
+    # Define rules for intensional predicates
+    p_a_rule = [(Rule_Template_Negation(0, False, False), Rule_Template_Negation(1, True, False))]
+    target_rule = (Rule_Template_Negation(0, True, False),
+                   None)
+    rules = {p_a[0]: p_a_rule[0], target: target_rule}
+
+    language_frame = Language_Frame(target, p_e, constants)
+    program_template = Program_Template(p_a, rules, 10)
+    # program_template = Program_Template(p_a, rules, 300)
+
+    dilp = DILP(language_frame, B, P, N, program_template)
+    return dilp.train(steps=300)
 
 def even_numbers_test():
     B = [Atom([Term(False, '0')], 'zero')] + \
@@ -47,17 +95,9 @@ def even_numbers_negation_test():
     B = [Literal(atom, False) for atom in B_atom]
 
     P_atom = [Atom([Term(False, str(i))], 'target') for i in range(0, 21, 2)]
-    positive_literals_P = [Literal(atom, False) for atom in P_atom]
+    P = [Literal(atom, False) for atom in P_atom]
     N_atom = [Atom([Term(False, str(i))], 'target') for i in range(1, 21, 2)]
-    positive_literals_N = [Literal(atom, False) for atom in N_atom]
-
-    # If target(0) is in the list of positive examples, then
-    # not target(0) must be in the list of negative examples
-    negative_literals_P = [Literal(atom, True) for atom in N_atom]
-    negative_literals_N = [Literal(atom, True) for atom in P_atom]
-
-    P = positive_literals_P + negative_literals_P
-    N = positive_literals_N + negative_literals_N
+    N = [Literal(atom, False) for atom in N_atom]
 
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
@@ -268,16 +308,17 @@ def less_than():
 
 #even_numbers_test()
 #even_numbers_negation_test()
-
-best_loss = 99999
+is_cyclic()
+'''best_loss = 99999
 for i in range(100):
     print(f"Iteration {i}")
-    loss = even_numbers_negation_test()
+    loss = is_cyclic()
     if loss < best_loss:
-        print(f"Lowest loss: {loss}")
         best_loss = loss
+    print(f"Lowest loss: {best_loss}")
 
 print(f"Lowest loss: {loss}")
+'''
 
 #less_than()
 #prdecessor()

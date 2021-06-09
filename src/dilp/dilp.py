@@ -10,13 +10,14 @@ import numpy as np
 from src.ilp.generate_rules.optimized_combinatorial_negation import Optimized_Combinatorial_Generator_Negation
 from src.utils import printProgressBar
 from src.utils import create_mask
-#import tensorflow.contrib.eager as tfe # obsolete in TF2
+# import tensorflow.contrib.eager as tfe # obsolete in TF2
 import os
 
 
 class DILP():
 
-    def __init__(self, language_frame: Language_Frame, background: list, positive: list, negative: list, program_template: Program_Template):
+    def __init__(self, language_frame: Language_Frame, background: list, positive: list, negative: list,
+                 program_template: Program_Template):
         '''
         Arguments:
             language_frame {Language_Frame} -- language frame
@@ -36,7 +37,7 @@ class DILP():
     def __init__parameters(self):
         self.rule_weights = OrderedDict()
         ilp = ILP_Negation(self.language_frame, self.background,
-                  self.positive, self.negative, self.program_template)
+                           self.positive, self.negative, self.program_template)
         (valuation, valuation_mapping, predicate_valuation_idx_map) = ilp.convert()
         self.uses_negation = ilp.uses_negation
         self.valuation_mapping = valuation_mapping
@@ -51,16 +52,17 @@ class DILP():
         with tf.compat.v1.variable_scope("rule_weights", reuse=tf.compat.v1.AUTO_REUSE):
             for p in [self.language_frame.target] + self.program_template.p_a:
                 rule_manager = Optimized_Combinatorial_Generator_Negation(
-                    self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p, self.language_frame.p_e)
+                    self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p,
+                    self.language_frame.p_e)
                 generated = rule_manager.generate_clauses()
                 print(generated)
 
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
-                                                       [len(generated[0]), len(
-                                                           generated[1])],
-                                                       initializer=tf.compat.v1.random_normal_initializer,
-                                                       dtype=tf.float32)
+                                                                 [len(generated[0]), len(
+                                                                     generated[1])],
+                                                                 initializer=tf.compat.v1.random_normal_initializer,
+                                                                 dtype=tf.float32)
                 deduction_matrices = []
                 elm1 = []
                 for clause1 in generated[0]:
@@ -86,6 +88,14 @@ class DILP():
                     self.training_data[valuation_mapping[literal]] = 1.0
                 elif literal in self.negative:
                     self.training_data[valuation_mapping[literal]] = 0.0
+
+    '''
+    def set_BPN(self, background, positive, negative, rule_weights):
+        self.background = background
+        self.positive = positive
+        self.negative = negative
+        self.__init__parameters(rule_weights)
+        '''
 
     def __all_variables(self):
         return [weights for weights in self.rule_weights.values()]
@@ -130,7 +140,7 @@ class DILP():
         :return: the loss history
         """
         str2weights = {str(key): value for key,
-                       value in self.rule_weights.items()}
+                                           value in self.rule_weights.items()}
         # if name:
         #     checkpoint = tf.train.Checkpoint(**str2weights)
         #     checkpoint_dir = "./model/" + name
@@ -154,7 +164,7 @@ class DILP():
             if i % 5 == 0:
                 # self.show_definition()
                 deduction = self.deduction()
-                #for idx, value in enumerate(deduction):
+                # for idx, value in enumerate(deduction):
                 #    print(f'{idx}: {value}')
                 self.show_atoms(deduction)
                 self.show_definition()
@@ -175,7 +185,7 @@ class DILP():
             labels = labels[index]
             outputs = tf.gather(outputs, index)
         loss = -tf.reduce_mean(input_tensor=labels * tf.math.log(outputs + 1e-10) +
-                               (1 - labels) * tf.math.log(1 - outputs + 1e-10))
+                                            (1 - labels) * tf.math.log(1 - outputs + 1e-10))
         return loss
 
     def grad(self):
@@ -217,7 +227,7 @@ class DILP():
 
         con_s = deduced_valuation + valuation - deduced_valuation * valuation
         # Update negated literals for valuations not updated in the predicate inference
-        all_values = [0, int(self.n_literals/2)-1]
+        all_values = [0, int(self.n_literals / 2) - 1]
         con_s = self.update_negated_literals(con_s, all_values)
         return con_s
 
@@ -232,7 +242,7 @@ class DILP():
                 print(f'neg idx: {idx + n_positive_literals}')
                 print(f'Value: {value}. Negated value: {negation_value}')
                 print("fak1_value")
-                print(valuation[idx:idx+20])
+                print(valuation[idx:idx + 20])
                 exit()
             if value > 1.0 or value < 0.0:
                 print(f'idx: {idx}')
@@ -248,17 +258,17 @@ class DILP():
                 break
             negation_value = valuation[idx + n_positive_literals]
             value = round(float(value), 5)
-            complement = round(1.0-float(negation_value), 5)
+            complement = round(1.0 - float(negation_value), 5)
             if negation_value > 1.0 or negation_value < 0.0:
                 print(f'Value: {value}. Negated value: {negation_value}')
                 print("fak1")
-                print(valuation[idx:idx+20])
+                print(valuation[idx:idx + 20])
                 exit()
             if value > 1.0 or value < 0.0:
                 print(f'Value: {value}. Negated value: {negation_value}')
                 print("fak2")
                 exit()
-            if round(float(value),5) != round(float(complement),5):
+            if round(float(value), 5) != round(float(complement), 5):
                 print(f'Value: {value}. Negated value: {negation_value}')
                 print("Fak3")
                 exit()
@@ -272,8 +282,8 @@ class DILP():
         if not self.uses_negation:
             return valuation
 
-        change_indices = [1]*len(valuation)
-        updated_valuation = [0]*len(valuation)
+        change_indices = [1] * len(valuation)
+        updated_valuation = [0] * len(valuation)
         n_positive_literals = len(valuation) / 2
 
         start = valuation_slice[0]
@@ -301,10 +311,10 @@ class DILP():
         # Strong negation
         return 1.0 - value
         # Weak negation
-        #return 1.0 if value == 0.0 else 0.0
+        # return 1.0 if value == 0.0 else 0.0
         # Weak negation with threshold
-        #threshold = 0.6
-        #return 1.0 if value < threshold else 0.0
+        # threshold = 0.6
+        # return 1.0 if value < threshold else 0.0
 
     def print_v(self, valuation):
         n_positive_literals = int(self.n_literals / 2)
@@ -350,4 +360,3 @@ class DILP():
         Y2 = tf.gather_nd(params=valuation, indices=X2)
         Z = Y1 * Y2
         return tf.reduce_max(input_tensor=Z, axis=1)
-

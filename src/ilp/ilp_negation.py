@@ -23,6 +23,8 @@ class ILP_Negation():
         self.negative = negative
         self.program_template = program_template
         self.uses_negation = self.uses_negation()
+        if self.uses_negation:
+            self.extend_examples()
 
     def uses_negation(self):
         '''
@@ -38,6 +40,27 @@ class ILP_Negation():
                 if allow_negation:
                     return True
         return False
+
+    def extend_examples(self):
+        '''
+        For every positive and negative example we construct its negation
+        and add it to the set of examples.
+        E.g.: P = {zero(0),...} then we add "not zero(0)"
+        to the negative examples
+        '''
+        negative_literals_positive_examples = []
+        negative_literals_negative_examples = []
+        for pos in self.positive:
+            negative_literal = pos.__copy__()
+            negative_literal.negate()
+            negative_literals_negative_examples.append(negative_literal)
+        for neg in self.negative:
+            negative_literal = neg.__copy__()
+            negative_literal.negate()
+            negative_literals_positive_examples.append(negative_literal)
+
+        self.positive += negative_literals_positive_examples
+        self.negative += negative_literals_negative_examples
 
     def generate_ground_literals(self):
         '''Generates the ground atoms from p_i,p_a,target and constants
