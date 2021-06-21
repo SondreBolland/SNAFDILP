@@ -5,7 +5,7 @@ from src.utils import is_intensional
 
 
 class Rule_Manger():
-    def __init__(self, p_i: list,  rules: tuple, target: Atom, p_e: list):
+    def __init__(self, p_i: list,  rules: tuple, target: Atom, p_e: list, clause_parameters: dict={}):
         '''
         Arguments:
             p_i {list} -- intensionl predicate
@@ -18,6 +18,7 @@ class Rule_Manger():
         self.p_i = p_i
         self.rules = rules
         self.p_e = p_e
+        self.clause_parameters = clause_parameters
 
     def generate_clauses(self):
         '''Generating clauses

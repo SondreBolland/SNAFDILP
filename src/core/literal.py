@@ -67,3 +67,11 @@ class Literal(Atom):
         copy_atom = Atom(self._terms, self._predicate)
         copy_literal = Literal(copy_atom, self._negated)
         return copy_literal
+
+    # Compares their string representation
+    def __lt__(self, other):
+        return str(self) < str(other)
+
+    # Compares their string representation
+    def __gt__(self, other):
+        return str(self) > str(other)

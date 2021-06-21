@@ -28,6 +28,10 @@ class Program_Template():
     def p_a(self):
         return self._p_a
 
+    @p_a.setter
+    def p_a(self, value):
+        self._p_a = value
+
     @property
     def rules(self):
         return self._rules

@@ -1,5 +1,7 @@
 '''Defines the main differentiable ILP code
 '''
+import operator
+
 from src.core import Literal, Atom, Term
 from src.ilp import ILP, Program_Template, Language_Frame, Rule_Template, Inference, ILP_Negation
 from src.ilp.generate_rules import Optimized_Combinatorial_Generator, Stratified_Program
@@ -8,6 +10,7 @@ from collections import OrderedDict
 import numpy as np
 
 from src.ilp.generate_rules.optimized_combinatorial_negation import Optimized_Combinatorial_Generator_Negation
+from src.ilp.generate_rules.optimized_combinatorial_stratified import Optimized_Combinatorial_Generator_Stratified
 from src.utils import printProgressBar
 from src.utils import create_mask
 # import tensorflow.contrib.eager as tfe # obsolete in TF2
@@ -17,7 +20,7 @@ import os
 class DILP():
 
     def __init__(self, language_frame: Language_Frame, background: list, positive: list, negative: list,
-                 program_template: Program_Template):
+                 program_template: Program_Template, clause_parameters: dict={}):
         '''
         Arguments:
             language_frame {Language_Frame} -- language frame
@@ -31,6 +34,7 @@ class DILP():
         self.positive = positive
         self.negative = negative
         self.program_template = program_template
+        self.clause_parameters = clause_parameters
         self.training_data = OrderedDict()  # index to label
         self.__init__parameters()
 
@@ -45,17 +49,24 @@ class DILP():
         self.base_valuation = valuation
         self.prev_valuation = valuation
         self.n_literals = len(valuation)
-        print(f'Number of ground atoms: {self.n_literals}')
         self.deduction_map = {}
         self.clause_map = {}
+        # Sort p_a with respect to strata
+        self.clause_parameters = dict(sorted(self.clause_parameters.items(), key=lambda item: item[1]))
+        p_a = list(self.clause_parameters.keys()).copy()
+        p_a.remove(self.language_frame.target)
+        self.program_template.p_a = p_a
 
+        n_generated_clauses = 0
         with tf.compat.v1.variable_scope("rule_weights", reuse=tf.compat.v1.AUTO_REUSE):
-            for p in [self.language_frame.target] + self.program_template.p_a:
-                rule_manager = Optimized_Combinatorial_Generator_Negation(
+            for p in self.program_template.p_a + [self.language_frame.target]:
+                rule_manager = Optimized_Combinatorial_Generator_Stratified(
                     self.program_template.p_a + [self.language_frame.target], self.program_template.rules[p], p,
-                    self.language_frame.p_e)
+                    self.language_frame.p_e, self.clause_parameters)
                 generated = rule_manager.generate_clauses()
                 print(generated)
+                n_generated_clauses += len(generated[0])
+                n_generated_clauses += len(generated[1])
 
                 self.clause_map[p] = generated
                 self.rule_weights[p] = tf.compat.v1.get_variable(p.predicate + "_rule_weights",
@@ -74,7 +85,7 @@ class DILP():
                         clause2, valuation_mapping, self.language_frame.constants))
                 deduction_matrices.append((elm1, elm2))
                 self.deduction_map[p] = deduction_matrices
-
+        print(f"{n_generated_clauses} generated clauses")
         for literal in valuation_mapping:
             if literal.negated:
                 positive_version = literal.__copy__()
@@ -209,7 +220,6 @@ class DILP():
 
     def inference_step(self, valuation):
         deduced_valuation = tf.zeros(valuation.shape[0])
-        # deduction_matrices = self.rules_manager.deducation_matrices[predicate]
         for predicate in self.deduction_map:
             valuation_idx_slice = self.predicate_valuation_idx_map[predicate.predicate]
             for matrix in self.deduction_map[predicate]:
@@ -222,49 +232,6 @@ class DILP():
         all_values = [0, int(self.n_literals / 2) - 1]
         con_s = self.update_negated_literals(con_s, all_values)
         return con_s
-
-    def value_in_bound_test(self, valuation):
-        n_positive_literals = int(self.n_literals / 2)
-        for idx, value in enumerate(valuation):
-            if idx >= n_positive_literals:
-                break
-            negation_value = valuation[idx + n_positive_literals]
-            value = round(float(value), 5)
-            if negation_value > 1.0 or negation_value < 0.0:
-                print(f'neg idx: {idx + n_positive_literals}')
-                print(f'Value: {value}. Negated value: {negation_value}')
-                print("fak1_value")
-                print(valuation[idx:idx + 20])
-                exit()
-            if value > 1.0 or value < 0.0:
-                print(f'idx: {idx}')
-                print(f'Value: {value}. Negated value: {negation_value}')
-                print("fak2_value")
-                exit()
-        print("yes")
-
-    def negation_test(self, valuation):
-        n_positive_literals = int(self.n_literals / 2)
-        for idx, value in enumerate(valuation):
-            if idx >= n_positive_literals:
-                break
-            negation_value = valuation[idx + n_positive_literals]
-            value = round(float(value), 5)
-            complement = round(1.0 - float(negation_value), 5)
-            if negation_value > 1.0 or negation_value < 0.0:
-                print(f'Value: {value}. Negated value: {negation_value}')
-                print("fak1")
-                print(valuation[idx:idx + 20])
-                exit()
-            if value > 1.0 or value < 0.0:
-                print(f'Value: {value}. Negated value: {negation_value}')
-                print("fak2")
-                exit()
-            if round(float(value), 5) != round(float(complement), 5):
-                print(f'Value: {value}. Negated value: {negation_value}')
-                print("Fak3")
-                exit()
-        print("Yes")
 
     def update_negated_literals(self, valuation, valuation_slice):
         '''

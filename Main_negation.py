@@ -4,6 +4,7 @@ import itertools
 import random
 
 from src.core import Term, Atom, Literal
+from src.dilp.SNAFDILP import SNAFDILP
 from src.ilp import Language_Frame, Program_Template, Rule_Template
 from src.dilp import DILP
 import tensorflow as tf
@@ -78,8 +79,8 @@ def no_negative_cycle():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=300)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=300)
 
 def not_grandparent():
     '''
@@ -131,7 +132,8 @@ def not_grandparent():
 
     # Define rules for intensional predicates
     p_a_rule = [(Rule_Template_Negation(1, True, False), None),
-                (Rule_Template_Negation(0, False, False), Rule_Template_Negation(0, False, False))]
+                (Rule_Template_Negation(0, False, False),
+                 Rule_Template_Negation(0, False, False))]
     target_rule = (Rule_Template_Negation(0, True, True),
                    None)
     rules = {p_a[0]: p_a_rule[0], p_a[1]: p_a_rule[1], target: target_rule}
@@ -140,8 +142,8 @@ def not_grandparent():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=300)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=300)
 
 
 def two_children():
@@ -196,8 +198,8 @@ def two_children():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=300)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=300)
 
 
 def has_roommate():
@@ -276,16 +278,15 @@ def has_roommate():
 
     # Define rules for intensional predicates
     p_a_rule = (Rule_Template_Negation(0, False, True), None)
-    target_rule = (Rule_Template_Negation(1, True, False),
-                   None)
+    target_rule = (Rule_Template_Negation(1, True, False), None)
     rules = {p_a[0]: p_a_rule, target: target_rule}
 
     language_frame = Language_Frame(target, p_e, constants)
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=200)
 
 
 def orphan():
@@ -363,8 +364,8 @@ def orphan():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=200)
 
 
 def innocent():
@@ -411,8 +412,8 @@ def innocent():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=200)
 
 
 def can_fly():
@@ -506,9 +507,41 @@ def can_fly():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
-    return dilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train(steps=200)
 
+def even_numbers_negation_test():
+    B_atom = [Atom([Term(False, '0')], 'zero')] + \
+             [Atom([Term(False, str(i)), Term(False, str(i + 1))], 'succ')
+              for i in range(0, 20)]
+    B = [Literal(atom, False) for atom in B_atom]
+
+    P_atom = [Atom([Term(False, str(i))], 'target') for i in range(0, 21, 2)]
+    P = [Literal(atom, False) for atom in P_atom]
+    N_atom = [Atom([Term(False, str(i))], 'target') for i in range(1, 21, 2)]
+    N = [Literal(atom, False) for atom in N_atom]
+
+    term_x_0 = Term(True, 'X_0')
+    term_x_1 = Term(True, 'X_1')
+
+    p_e = [Literal(Atom([term_x_0], 'zero'), False), Literal(Atom([term_x_0, term_x_1], 'succ'), False)]
+    p_a = [Literal(Atom([term_x_0, term_x_1], 'pred'), False)]
+    target = Literal(Atom([term_x_0], 'target'), False)
+    constants = [str(i) for i in range(0, 21)]
+
+    # Define rules for intensional predicates
+    p_a_rule = (Rule_Template_Negation(1, False, False), None)
+    target_rule = (Rule_Template_Negation(0, False, True),
+                   Rule_Template_Negation(1, True, False))
+    rules = {p_a[0]: p_a_rule, target: target_rule}
+
+    langage_frame = Language_Frame(target, p_e, constants)
+    program_template = Program_Template(p_a, rules, 10)
+    #program_template = Program_Template(p_a, rules, 300)
+
+    snafdilp = SNAFDILP(langage_frame, B, P, N, program_template)
+
+    return snafdilp.train(steps=300)
 
 def odd():
     '''
@@ -536,7 +569,7 @@ def odd():
     constants = [str(i) for i in range(0, 21)]
 
     # Define rules for intensional predicates
-    succ2_rule = (Rule_Template_Negation(1, False, False), None)
+    succ2_rule = (Rule_Template_Negation(1, True, False), None)
     even_rule = (Rule_Template_Negation(0, False, False),
                  Rule_Template_Negation(1, True, False))
     target_rule = (Rule_Template_Negation(0, True, True), None)
@@ -546,17 +579,16 @@ def odd():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    dilp = DILP(language_frame, B, P, N, program_template)
+    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
+    return snafdilp.train()
 
-    loss = dilp.train(steps=400)
-    dilp.show_definition()
-    return loss
+
 
 
 best_loss = 99999
 for i in range(100):
     print(f"Iteration {i}")
-    loss = has_roommate()
+    loss = odd()
     if loss < best_loss:
         best_loss = loss
     print(f"Lowest loss: {best_loss}")
