@@ -23,6 +23,11 @@ class SNAFDILP:
         self.dilps = self.generate_stratified_dilps()
 
     def generate_stratified_dilps(self):
+        '''
+        Construct n DILP objects. All objects have clauses seperated into
+        strata to ensure stratification.
+        :return:
+        '''
         rules = self.program_template.rules
         n_auxiliary_predicates = len(rules)-1 # Subtract 1 for target predicate
         # If only target predicate then no risk for stratification
@@ -34,27 +39,24 @@ class SNAFDILP:
         rules.pop(target)
         keys = list(rules.keys())
         if n_auxiliary_predicates == 1:
-            strata1 = {keys[0]: 1, target: 1}
-            strata2 = {keys[0]: 1, target: 2}
+            strata1 = {keys[0]: 1, target: 2}
             dilp1 = self.create_DILP(strata1)
-            dilp2 = self.create_DILP(strata2)
-            return [dilp1, dilp2]
+            # Removed all predicates in same strata. No need
+            return [dilp1]
 
         if n_auxiliary_predicates == 2:
-            strata1 = {keys[0]: 1, keys[1]: 2, target: 2}
-            strata2 = {keys[0]: 2, keys[1]: 1, target: 2}
+            strata1 = {keys[0]: 2, keys[1]: 1, target: 2}
+            strata2 = {keys[0]: 1, keys[1]: 2, target: 2}
             strata3 = {keys[0]: 1, keys[1]: 1, target: 2}
             strata4 = {keys[0]: 1, keys[1]: 2, target: 3}
             strata5 = {keys[0]: 2, keys[1]: 1, target: 3}
-            strata6 = {keys[0]: 1, keys[1]: 1, target: 1}
 
             dilp1 = self.create_DILP(strata1)
             dilp2 = self.create_DILP(strata2)
             dilp3 = self.create_DILP(strata3)
             dilp4 = self.create_DILP(strata4)
             dilp5 = self.create_DILP(strata5)
-            dilp6 = self.create_DILP(strata6)
-            return [dilp1, dilp2, dilp3, dilp4, dilp5, dilp6]
+            return [dilp1, dilp2, dilp3, dilp4, dilp5]
 
     def create_DILP(self, strata):
         clause_parameters = self.create_clause_parameters(strata)

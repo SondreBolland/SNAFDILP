@@ -99,10 +99,10 @@ class Optimized_Combinatorial_Generator_Stratified(Rule_Manger):
                                     # If the variables of the clause are different then allow this clause
                                     variables1 = body1_atom.terms
                                     variables2 = body2_atom.terms
-                                    add_clause = True
+                                    add_clause = False
                                     for i in range(len(variables1)):
                                         if variables1[i] != variables2[i]:
-                                            add_clause = False
+                                            add_clause = True
                                             break
                                     if not add_clause:
                                         continue

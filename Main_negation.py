@@ -13,9 +13,56 @@ from src.ilp.template.rule_template_negation import Rule_Template_Negation
 
 tf.compat.v1.enable_eager_execution()
 
+
+def greater_than():
+    '''
+    Learn the target predicate greater_than(X,Y) which is true
+    if X is greater than Y. The aim is to mirror the less_than
+    predicate use of negation as failure.
+    '''
+    constants = [str(i) for i in range(0, 10)]
+    B_atom = [Atom([Term(False, '0')], 'zero')] + \
+        [Atom([Term(False, str(i)), Term(False, str(i + 1))], 'succ')
+         for i in range(0, 9)]
+    B = [Literal(atom, False) for atom in B_atom]
+
+    P_atom = []
+    N_atom = []
+    for i in range(0, 10):
+        for j in range(0, 10):
+            if j > i:
+                P_atom.append(
+                    Atom([Term(False, str(j)), Term(False, str(i))], 'target'))
+            else:
+                N_atom.append(
+                    Atom([Term(False, str(j)), Term(False, str(i))], 'target'))
+    P = [Literal(atom, False) for atom in P_atom]
+    N = [Literal(atom, False) for atom in N_atom]
+
+    term_x_0 = Term(True, 'X_0')
+    term_x_1 = Term(True, 'X_1')
+
+    p_e = [Literal(Atom([term_x_0], 'zero'), False),
+           Literal(Atom([term_x_0, term_x_1], 'succ'), False)]
+    p_a = [Literal(Atom([term_x_0, term_x_1], 'pred'), False)]
+    target = Atom([term_x_0, term_x_1], 'target')
+
+    # Define rules for intensional predicates
+    p_a_rule = [(Rule_Template_Negation(0, False, False),
+                 Rule_Template_Negation(1, True, False))]
+    target_rule = (Rule_Template_Negation(0, True, True),
+                   None)
+    rules = {p_a[0]: p_a_rule[0], target: target_rule}
+
+    langage_frame = Language_Frame(target, p_e, constants)
+    program_template = Program_Template(p_a, rules, 10)
+
+    snafdilp = SNAFDILP(langage_frame, B, P, N, program_template)
+    return snafdilp.train(steps=500)
+
 def no_negative_cycle():
     '''
-    Learn the target predicate negative_cycle(X). The predicate checks if
+    Learn the target predicate no_negative_cycle(X). The predicate checks if
     a given node in a graph is part of a negative cycle (cycle with at least one
     negative edge).
     '''
@@ -70,7 +117,8 @@ def no_negative_cycle():
     target = Literal(Atom([term_x_0], 'target'), False)
 
     # Define rules for intensional predicates
-    p_a_rule = [(Rule_Template_Negation(0, False, False), Rule_Template_Negation(1, True, False))]
+    p_a_rule = [(Rule_Template_Negation(0, False, True),
+                 Rule_Template_Negation(1, True, False))]
     target_rule = (Rule_Template_Negation(0, True, True),
                    None)
     rules = {p_a[0]: p_a_rule[0], target: target_rule}
@@ -569,7 +617,7 @@ def odd():
     constants = [str(i) for i in range(0, 21)]
 
     # Define rules for intensional predicates
-    succ2_rule = (Rule_Template_Negation(1, True, False), None)
+    succ2_rule = (Rule_Template_Negation(1, False, False), None)
     even_rule = (Rule_Template_Negation(0, False, False),
                  Rule_Template_Negation(1, True, False))
     target_rule = (Rule_Template_Negation(0, True, True), None)
@@ -580,15 +628,13 @@ def odd():
     # program_template = Program_Template(p_a, rules, 300)
 
     snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
-    return snafdilp.train()
-
-
+    return snafdilp.train(steps=400)
 
 
 best_loss = 99999
 for i in range(100):
     print(f"Iteration {i}")
-    loss = odd()
+    loss = greater_than()
     if loss < best_loss:
         best_loss = loss
     print(f"Lowest loss: {best_loss}")
