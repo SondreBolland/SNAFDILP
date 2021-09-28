@@ -54,7 +54,11 @@ class DILP():
         # Sort p_a with respect to strata
         self.clause_parameters = dict(sorted(self.clause_parameters.items(), key=lambda item: item[1]))
         p_a = list(self.clause_parameters.keys()).copy()
-        p_a.remove(self.language_frame.target)
+        if len(p_a) != 0:
+            p_a.remove(self.language_frame.target)
+            self.strata = self.get_strata()
+        else:
+            self.strata = [[self.language_frame.target]]
         self.program_template.p_a = p_a
 
         n_generated_clauses = 0
@@ -86,19 +90,36 @@ class DILP():
                 deduction_matrices.append((elm1, elm2))
                 self.deduction_map[p] = deduction_matrices
         print(f"{n_generated_clauses} generated clauses")
+        self.generate_training_data(valuation_mapping, self.positive, self.negative)
+
+    def generate_training_data(self, valuation_mapping, positive, negative):
+        self.training_data = OrderedDict()
         for literal in valuation_mapping:
             if literal.negated:
                 positive_version = literal.__copy__()
                 positive_version.negate()
-                if positive_version in self.positive:
+                if positive_version in positive:
                     self.training_data[valuation_mapping[literal]] = 0.0
-                elif positive_version in self.negative:
+                elif positive_version in negative:
                     self.training_data[valuation_mapping[literal]] = 1.0
             else:
-                if literal in self.positive:
+                if literal in positive:
                     self.training_data[valuation_mapping[literal]] = 1.0
-                elif literal in self.negative:
+                elif literal in negative:
                     self.training_data[valuation_mapping[literal]] = 0.0
+
+    def get_strata(self):
+        parameters = self.clause_parameters
+        final_stratum = 0
+        for parameter in parameters.values():
+            stratum = parameter.stratum
+            if stratum > final_stratum:
+                final_stratum = stratum
+        strata = [[]]*final_stratum
+        for literal, parameter in parameters.items():
+            stratum = parameter.stratum
+            strata[stratum-1].append(literal)
+        return strata
 
     def __all_variables(self):
         return [weights for weights in self.rule_weights.values()]
@@ -211,26 +232,28 @@ class DILP():
         # takes background as input and return a valuation of target ground atoms
         valuation = self.base_valuation
         print('Performing Inference')
-        for step in range(self.program_template.T):
-            printProgressBar(step, self.program_template.T, prefix='Progress:',
-                             suffix='Complete', length=50)
-            valuation = self.inference_step(valuation)
+        for stratum in self.strata:
+            for step in range(self.program_template.T):
+                printProgressBar(step, self.program_template.T, prefix='Progress:',
+                                 suffix='Complete', length=50)
+                valuation = self.inference_step(valuation, stratum)
         print('Inference Complete')
         return valuation
 
-    def inference_step(self, valuation):
+    def inference_step(self, valuation, stratum):
         deduced_valuation = tf.zeros(valuation.shape[0])
-        for predicate in self.deduction_map:
+        for predicate in stratum:
             valuation_idx_slice = self.predicate_valuation_idx_map[predicate.predicate]
             for matrix in self.deduction_map[predicate]:
                 deduced_valuation += DILP.inference_single_predicate(
                     valuation, matrix, self.rule_weights[predicate])
                 deduced_valuation = self.update_negated_literals(deduced_valuation, valuation_idx_slice)
 
-        con_s = deduced_valuation + valuation - deduced_valuation * valuation
+        c_t = deduced_valuation + valuation - deduced_valuation * valuation
+        #con_s = c_t + deduced_valuation - c_t * deduced_valuation
         # Update negated literals for valuations not updated in the predicate inference
         all_values = [0, int(self.n_literals / 2) - 1]
-        con_s = self.update_negated_literals(con_s, all_values)
+        con_s = self.update_negated_literals(c_t, all_values)
         return con_s
 
     def update_negated_literals(self, valuation, valuation_slice):
@@ -270,10 +293,10 @@ class DILP():
         # Strong negation
         return 1.0 - value
         # Weak negation
-        # return 1.0 if value == 0.0 else 0.0
+        #return 1.0 if value == 0.0 else 0.0
         # Weak negation with threshold
-        # threshold = 0.6
-        # return 1.0 if value < threshold else 0.0
+        #threshold = 0.6
+        #return 1.0 if value < threshold else 0.0
 
     def print_v(self, valuation):
         n_positive_literals = int(self.n_literals / 2)

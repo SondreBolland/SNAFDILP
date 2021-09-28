@@ -45,18 +45,18 @@ class SNAFDILP:
             return [dilp1]
 
         if n_auxiliary_predicates == 2:
-            strata1 = {keys[0]: 2, keys[1]: 1, target: 2}
-            strata2 = {keys[0]: 1, keys[1]: 2, target: 2}
-            strata3 = {keys[0]: 1, keys[1]: 1, target: 2}
-            strata4 = {keys[0]: 1, keys[1]: 2, target: 3}
-            strata5 = {keys[0]: 2, keys[1]: 1, target: 3}
+            strata1 = {keys[0]: 1, keys[1]: 2, target: 3}
+            #strata2 = {keys[0]: 2, keys[1]: 1, target: 3}
+            #strata3 = {keys[0]: 1, keys[1]: 1, target: 2}
+            #strata4 = {keys[0]: 2, keys[1]: 1, target: 2}
+            #strata5 = {keys[0]: 1, keys[1]: 2, target: 2}
 
             dilp1 = self.create_DILP(strata1)
-            dilp2 = self.create_DILP(strata2)
-            dilp3 = self.create_DILP(strata3)
-            dilp4 = self.create_DILP(strata4)
-            dilp5 = self.create_DILP(strata5)
-            return [dilp1, dilp2, dilp3, dilp4, dilp5]
+            #dilp2 = self.create_DILP(strata2)
+            #dilp3 = self.create_DILP(strata3)
+            #dilp4 = self.create_DILP(strata4)
+            #dilp5 = self.create_DILP(strata5)
+            return [dilp1]#, dilp2, dilp3, dilp4, dilp5]
 
     def create_DILP(self, strata):
         clause_parameters = self.create_clause_parameters(strata)
@@ -110,17 +110,17 @@ class SNAFDILP:
         program is considered learned
         :return: lowest loss of all DILP objects trained
         '''
-        best_dilp = None
+        self.best_dilp = None
         best_loss = 9999
         for dilp in self.dilps:
             loss = dilp.train(steps=steps)
             if loss < best_loss:
                 best_loss = loss
-                best_dilp = dilp
+                self.best_dilp = dilp
             if loss < threshold:
                 break
         print("\n\nBest Program --------------------------------")
-        deduction = best_dilp.deduction()
-        best_dilp.show_atoms(deduction)
-        best_dilp.show_definition()
+        deduction = self.best_dilp.deduction()
+        self.best_dilp.show_atoms(deduction)
+        self.best_dilp.show_definition()
         return best_loss

@@ -1,5 +1,6 @@
 '''For testing DILP with negation
 '''
+import copy
 import itertools
 import random
 
@@ -14,13 +15,13 @@ from src.ilp.template.rule_template_negation import Rule_Template_Negation
 tf.compat.v1.enable_eager_execution()
 
 
-def greater_than():
+def greater_than(p=0.0):
     '''
     Learn the target predicate greater_than(X,Y) which is true
     if X is greater than Y. The aim is to mirror the less_than
     predicate use of negation as failure.
     '''
-    constants = [str(i) for i in range(0, 10)]
+    constants = [str(i) for i in range(0, 20)]
     B_atom = [Atom([Term(False, '0')], 'zero')] + \
         [Atom([Term(False, str(i)), Term(False, str(i + 1))], 'succ')
          for i in range(0, 9)]
@@ -28,16 +29,18 @@ def greater_than():
 
     P_atom = []
     N_atom = []
-    for i in range(0, 10):
-        for j in range(0, 10):
+    for i in constants:
+        for j in constants:
             if j > i:
                 P_atom.append(
                     Atom([Term(False, str(j)), Term(False, str(i))], 'target'))
             else:
                 N_atom.append(
                     Atom([Term(False, str(j)), Term(False, str(i))], 'target'))
+
     P = [Literal(atom, False) for atom in P_atom]
     N = [Literal(atom, False) for atom in N_atom]
+    P, N = transfer_data(P, N, p)
 
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
@@ -60,7 +63,7 @@ def greater_than():
     snafdilp = SNAFDILP(langage_frame, B, P, N, program_template)
     return snafdilp.train(steps=500)
 
-def no_negative_cycle():
+def no_negative_cycle(p=0.0):
     '''
     Learn the target predicate no_negative_cycle(X). The predicate checks if
     a given node in a graph is part of a negative cycle (cycle with at least one
@@ -106,6 +109,8 @@ def no_negative_cycle():
               Atom([Term(False, 'e')], 'target')]
     N = [Literal(atom, False) for atom in N_atom]
 
+    P, N = transfer_data(P, N, p)
+
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
     term_x_2 = Term(True, 'X_2')
@@ -130,7 +135,7 @@ def no_negative_cycle():
     snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
     return snafdilp.train(steps=300)
 
-def not_grandparent():
+def not_grandparent(p=0.0):
     '''
     Learn the target predicate not_grandparent(X,Y) which is true
     if X is not the grapndparent of Y.
@@ -167,6 +172,7 @@ def not_grandparent():
 
     P = [Literal(atom, False) for atom in P_atom]
     N = [Literal(atom, False) for atom in N_atom]
+    mislabelled_P, mislabelled_N = transfer_data(copy.deepcopy(P), copy.deepcopy(N), p)
 
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
@@ -174,27 +180,30 @@ def not_grandparent():
 
     p_e = [Literal(Atom([term_x_0, term_x_1], 'mother'), False),
            Literal(Atom([term_x_0, term_x_1], 'father'), False)]
-    p_a = [Literal(Atom([term_x_0, term_x_1], 'pred1'), False),
-           Literal(Atom([term_x_0, term_x_1], 'pred2'), False)]
+    p_a = [Literal(Atom([term_x_0, term_x_1], 'pred'), False)]
     target = Literal(Atom([term_x_0, term_x_2], 'target'), False)
 
     # Define rules for intensional predicates
-    p_a_rule = [(Rule_Template_Negation(1, True, False), None),
-                (Rule_Template_Negation(0, False, False),
-                 Rule_Template_Negation(0, False, False))]
-    target_rule = (Rule_Template_Negation(0, True, True),
-                   None)
-    rules = {p_a[0]: p_a_rule[0], p_a[1]: p_a_rule[1], target: target_rule}
+    p_a_rule = [(Rule_Template_Negation(0, False, False),
+                 Rule_Template_Negation(1, True, False),)]
+    target_rule = (Rule_Template_Negation(0, True, True), None)
+    rules = {p_a[0]: p_a_rule[0], target: target_rule}
 
     language_frame = Language_Frame(target, p_e, constants)
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
-    return snafdilp.train(steps=300)
+    snafdilp = SNAFDILP(language_frame, B, mislabelled_P, mislabelled_N, program_template)
+    snafdilp.train(steps=450)
+
+    dilp = snafdilp.best_dilp
+    dilp.generate_training_data(dilp.valuation_mapping, P, N)
+    loss = dilp.loss()
+    print(f"Loss: {loss}")
+    return loss
 
 
-def two_children():
+def two_children(p=0.0):
     '''
     Learn the target predicate of has_at_least_two_children(X).
     In a directed graph we want to check if a node has at least two children
@@ -227,6 +236,8 @@ def two_children():
               Atom([Term(False, 'h')], 'target')]
     N = [Literal(atom, False) for atom in N_atom]
 
+    mislabelled_P, mislabelled_N = transfer_data(copy.deepcopy(P), copy.deepcopy(N), p)
+
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
     term_x_2 = Term(True, 'X_2')
@@ -246,11 +257,17 @@ def two_children():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
-    return snafdilp.train(steps=300)
+    snafdilp = SNAFDILP(language_frame, B, mislabelled_P, mislabelled_N, program_template)
+    snafdilp.train(steps=300)
+
+    dilp = snafdilp.best_dilp
+    dilp.generate_training_data(dilp.valuation_mapping, P, N)
+    loss = dilp.loss()
+    print(f"Loss: {loss}")
+    return loss
 
 
-def has_roommate():
+def has_roommate(p=0.0):
     '''
     Learn the target predicate of has_roommate(X, Y)
     which is true if there exists a person Y that X is married to
@@ -316,6 +333,8 @@ def has_roommate():
               Atom([Term(False, 'Tormund')], 'target')]
     N = [Literal(atom, False) for atom in N_atom]
 
+    mislabelled_P, mislabelled_N = transfer_data(copy.deepcopy(P), copy.deepcopy(N), p)
+
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
 
@@ -333,11 +352,17 @@ def has_roommate():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
-    return snafdilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, mislabelled_P, mislabelled_N, program_template)
+    snafdilp.train(steps=250)
+
+    dilp = snafdilp.best_dilp
+    dilp.generate_training_data(dilp.valuation_mapping, P, N)
+    loss = dilp.loss()
+    print(f"Loss: {loss}")
+    return loss
 
 
-def orphan():
+def orphan(p=0.0):
     '''
     Learn the target predicate of orphan(X)
     which is true if X has no parent
@@ -395,6 +420,8 @@ def orphan():
               Atom([Term(False, 'Mance')], 'target')]
     N = [Literal(atom, False) for atom in N_atom]
 
+    P, N = transfer_data(P, N, p)
+
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
 
@@ -416,7 +443,7 @@ def orphan():
     return snafdilp.train(steps=200)
 
 
-def innocent():
+def innocent(p=0.0):
     '''
     Learn the target predicate of innocent(X)
     which is true if X is not guilty
@@ -444,6 +471,8 @@ def innocent():
               Atom([Term(False, 'Monica')], 'target')]
     N = [Literal(atom, False) for atom in N_atom]
 
+    mislabelled_P, mislabelled_N = transfer_data(copy.deepcopy(P), copy.deepcopy(N), p)
+
     term_x_0 = Term(True, 'X_0')
 
     p_e = [Literal(Atom([term_x_0], 'guilty'), False)]
@@ -460,11 +489,17 @@ def innocent():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
-    return snafdilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, mislabelled_P, mislabelled_N, program_template)
+    snafdilp.train(steps=200)
+
+    dilp = snafdilp.best_dilp
+    dilp.generate_training_data(dilp.valuation_mapping, P, N)
+    loss = dilp.loss()
+    print(f"Loss: {loss}")
+    return loss
 
 
-def can_fly():
+def can_fly(p=0.0):
     '''
     Learn the target predicate of can_fly(X)
     which is true if X is a bird, but not an abnormal bird
@@ -538,6 +573,8 @@ def can_fly():
               Atom([Term(False, 'russianblue')], 'target')]
     N = [Literal(atom, False) for atom in N_atom]
 
+    mislabelled_P, mislabelled_N = transfer_data(copy.deepcopy(P), copy.deepcopy(N), p)
+
     term_x_0 = Term(True, 'X_0')
 
     p_e = [Literal(Atom([term_x_0], 'is_bird'), False),
@@ -555,10 +592,16 @@ def can_fly():
     program_template = Program_Template(p_a, rules, 10)
     # program_template = Program_Template(p_a, rules, 300)
 
-    snafdilp = SNAFDILP(language_frame, B, P, N, program_template)
-    return snafdilp.train(steps=200)
+    snafdilp = SNAFDILP(language_frame, B, mislabelled_P, mislabelled_N, program_template)
+    snafdilp.train(steps=200)
 
-def even_numbers_negation_test():
+    dilp = snafdilp.best_dilp
+    dilp.generate_training_data(dilp.valuation_mapping, P, N)
+    loss = dilp.loss()
+    print(f"Loss: {loss}")
+    return loss
+
+def even_numbers_negation_test(p=0.0):
     B_atom = [Atom([Term(False, '0')], 'zero')] + \
              [Atom([Term(False, str(i)), Term(False, str(i + 1))], 'succ')
               for i in range(0, 20)]
@@ -568,6 +611,8 @@ def even_numbers_negation_test():
     P = [Literal(atom, False) for atom in P_atom]
     N_atom = [Atom([Term(False, str(i))], 'target') for i in range(1, 21, 2)]
     N = [Literal(atom, False) for atom in N_atom]
+
+    mislabelled_P, mislabelled_N = transfer_data(copy.deepcopy(P), copy.deepcopy(N), p)
 
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
@@ -587,11 +632,16 @@ def even_numbers_negation_test():
     program_template = Program_Template(p_a, rules, 10)
     #program_template = Program_Template(p_a, rules, 300)
 
-    snafdilp = SNAFDILP(langage_frame, B, P, N, program_template)
+    snafdilp = SNAFDILP(langage_frame, B, mislabelled_P, mislabelled_N, program_template)
+    snafdilp.train(steps=400)
 
-    return snafdilp.train(steps=300)
+    dilp = snafdilp.best_dilp
+    dilp.generate_training_data(dilp.valuation_mapping, P, N)
+    loss = dilp.loss()
+    print(f"Loss: {loss}")
+    return loss
 
-def odd():
+def odd(p=0.0):
     '''
    Learn the target predicate of odd(X)
    which is true if X is an odd number
@@ -606,6 +656,8 @@ def odd():
     # Even numbers
     N_atom = [Atom([Term(False, str(i))], 'target') for i in range(0, 21, 2)]
     N = [Literal(atom, False) for atom in N_atom]
+
+    P, N = transfer_data(P, N, p)
 
     term_x_0 = Term(True, 'X_0')
     term_x_1 = Term(True, 'X_1')
@@ -631,12 +683,46 @@ def odd():
     return snafdilp.train(steps=400)
 
 
-best_loss = 99999
-for i in range(100):
-    print(f"Iteration {i}")
-    loss = greater_than()
-    if loss < best_loss:
-        best_loss = loss
-    print(f"Lowest loss: {best_loss}")
+def transfer_data(positive, negative, p):
+    if p == 0.0:
+        return positive, negative
+    n_transferred_positive = int((len(positive) * p))
+    transfer_positive = []
+    used_index = []
+    while len(transfer_positive) != n_transferred_positive:
+        index = random.randint(0, len(positive)-1)
+        if index not in used_index:
+            transfer_positive.append(positive[index])
+            used_index.append(index)
 
-print(f"Lowest loss: {loss}")
+    n_transferred_negative = int((len(negative) * p))
+    transfer_negative = []
+    used_index = []
+    while len(transfer_negative) != n_transferred_negative:
+        index = random.randint(0, len(negative)-1)
+        if index not in used_index:
+            transfer_negative.append(negative[index])
+            used_index.append(index)
+
+    for elem in transfer_positive:
+        print(elem)
+        positive.remove(elem)
+        negative.append(elem)
+    for elem in transfer_negative:
+        print(elem)
+        negative.remove(elem)
+        positive.append(elem)
+    return positive, negative
+
+
+
+if __name__ == "__main__":
+    best_loss = 99999
+    for i in range(100):
+        print(f"Iteration {i}")
+        loss = innocent()
+        if loss < best_loss:
+            best_loss = loss
+        print(f"Lowest loss: {best_loss}")
+
+    print(f"Lowest loss: {loss}")
